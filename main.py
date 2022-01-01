@@ -5,6 +5,12 @@ from langmodel import LMClassifier
 from linearmodel import LinearClassifier
 from neuralmodel import NeuralClassifier
 
+'''
+A note for ourselves!:
+data contains train.json, val.json, test.json
+each json file contains a list of samples. each element in the list is a dict with two keys: poem and poet.
+poet is the id of the poet to whom the song belongs. poem is a list of strings -> mesras
+'''
 
 def get_parser():
     parser = argparse.ArgumentParser()
