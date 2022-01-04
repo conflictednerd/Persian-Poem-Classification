@@ -104,13 +104,16 @@ class LMClassifier(Classifier):
         pass
 
     def evaluate(self, model, dataloader):
+        model.eval()
         score = 0
         total_num = 0
         for batch_idx, batch in tqdm(enumerate(dataloader), total=len(dataloader)):
             X1 = batch['input_ids'].to(self.DEVICE)
+            # print(X1.shape)
             y1 = batch['labels'].to(self.DEVICE)
-            pred = model(X1, attention_mask=batch['attention_mask'].to(self.DEVICE))[0]
-            pred_label = pred.argmax(dim=1)
+            pred = model(X1, attention_mask=batch['attention_mask'].to(self.DEVICE))
+            # print(pred)
+            pred_label = pred[0].argmax(dim=1)
             batch_score = sum(pred_label == y1)
             score += batch_score.item()
             total_num += X1.shape[0]
@@ -124,11 +127,16 @@ class LMClassifier(Classifier):
 
         data_collator = DataCollatorWithPadding(self.tokenizer)
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=data_collator, shuffle=True)
-        eval_dataloader = DataLoader(eval_dataset, batch_size=args.batch_size, collate_fn=data_collator,
+        eval_dataloader = DataLoader(eval_dataset, batch_size=4, collate_fn=data_collator,
                                      shuffle=False)
         optim = AdamW(self.model.parameters(), lr=args.lr)
+        criterion = torch.nn.CrossEntropyLoss().to(self.DEVICE)
         print("beginning training")
         best_acc = 0
+
+        acc_after_epoch = self.evaluate(self.model, eval_dataloader)
+        print("accuracy before learning: ", acc_after_epoch)
+
         for epoch in range(args.epochs):
             self.model.train()
             print("##### epoch no: " + str(epoch + 1))
@@ -137,8 +145,8 @@ class LMClassifier(Classifier):
                 input_ids = batch['input_ids'].to(self.DEVICE)
                 attention_mask = batch['attention_mask'].to(self.DEVICE)
                 labels = batch['labels'].to(self.DEVICE)
-                outputs = self.model(input_ids, attention_mask=attention_mask, labels=labels)
-                loss = outputs[0]
+                outputs = self.model(input_ids, attention_mask=attention_mask)
+                loss = criterion(outputs[0], labels)
                 loss.backward()
                 optim.step()
             self.model.eval()
@@ -149,4 +157,9 @@ class LMClassifier(Classifier):
                 self.save()
 
     def test(self, args):
-        pass
+
+        data_collator = DataCollatorWithPadding(self.tokenizer)
+        eval_dataloader = DataLoader(self.eval_dataset, batch_size=4, collate_fn=data_collator,
+                                     shuffle=False)
+
+        print(self.evaluate(self.model, eval_dataloader))
