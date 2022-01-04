@@ -12,6 +12,7 @@ each json file contains a list of samples. each element in the list is a dict wi
 poet is the id of the poet to whom the song belongs. poem is a list of strings -> mesras
 '''
 
+
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', default='lm',
@@ -20,12 +21,20 @@ def get_parser():
                         default='HooshvareLab/albert-fa-zwnj-base-v2')
     parser.add_argument('--load_model', action='store_true', default=False,
                         help='use if you want to load the model from file')
+    parser.add_argument('--freeze_encoder', action='store_true', default=False,
+                        help='freezing encoder in language model fine tuning')
     parser.add_argument('--train', action='store_true',
                         default=False, help='use if you want to train the model')
     parser.add_argument('--test', action='store_true', default=False,
                         help='use if you want the model to report performance on held-out test set')
     parser.add_argument('--data_path', default='./data/',
                         help='directory where training data is stored')
+    parser.add_argument('--lm_epochs', default=3,
+                        help='number of fine_tuning epochs')
+    parser.add_argument('--lm_batch_size', default=8,
+                        help='language model finetuning batch size')
+    parser.add_argument('--lm_lr', default=5e-5,
+                        help='language model finetuning learning rate')
     parser.add_argument('--models_dir', default='./models_dir/',
                         help='directory where models are saved to/loaded from')
 
