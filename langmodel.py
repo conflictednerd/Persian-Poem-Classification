@@ -114,7 +114,7 @@ class LMClassifier(Classifier):
             batch_score = sum(pred_label == y1)
             score += batch_score.item()
             total_num += X1.shape[0]
-        return (score / total_num)
+        return score / total_num
 
     def train(self, args):
         train_dataset, eval_dataset = self.create_dataset()
@@ -123,15 +123,15 @@ class LMClassifier(Classifier):
         self.model.train()
 
         data_collator = DataCollatorWithPadding(self.tokenizer)
-        train_loader = DataLoader(train_dataset, batch_size=args.lm_batch_size, collate_fn=data_collator, shuffle=True)
-        eval_dataloader = DataLoader(eval_dataset, batch_size=args.lm_batch_size, collate_fn=data_collator,
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=data_collator, shuffle=True)
+        eval_dataloader = DataLoader(eval_dataset, batch_size=args.batch_size, collate_fn=data_collator,
                                      shuffle=False)
-        optim = AdamW(self.model.parameters(), lr=5e-5)
+        optim = AdamW(self.model.parameters(), lr=args.lr)
         print("beginning training")
-        for epoch in range(3):
+        best_acc = 0
+        for epoch in range(args.epochs):
             self.model.train()
-            print(epoch)
-            print("#####")
+            print("##### epoch no: " + str(epoch + 1))
             for batch_idx, batch in tqdm(enumerate(train_loader), total=len(train_loader)):
                 optim.zero_grad()
                 input_ids = batch['input_ids'].to(self.DEVICE)
@@ -141,8 +141,12 @@ class LMClassifier(Classifier):
                 loss = outputs[0]
                 loss.backward()
                 optim.step()
-        self.model.eval()
-        print("accuracy: ", self.evaluate(self.model, eval_dataloader))
+            self.model.eval()
+            acc_after_epoch = self.evaluate(self.model, eval_dataloader)
+            print("accuracy after epoch: ", acc_after_epoch)
+            if acc_after_epoch > best_acc:
+                best_acc = acc_after_epoch
+                self.save()
 
     def test(self, args):
         pass
