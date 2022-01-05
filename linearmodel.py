@@ -1,15 +1,14 @@
 import json
 import os
+import pickle
 from typing import List, Union
 
 import hazm
 import numpy as np
 import pandas as pd
-import pickle
 from sklearn import feature_extraction
 from sklearn.feature_selection import SelectKBest, f_classif
-from sklearn.linear_model import \
-    LogisticRegression  # set class_weight = 'balanced
+from sklearn.linear_model import LogisticRegression
 
 from classifier import Classifier
 
@@ -22,10 +21,14 @@ class LinearClassifier(Classifier):
         self.lemmatizer = hazm.Lemmatizer()
         self.vectorizer = feature_extraction.text.TfidfVectorizer(
             max_features=args.linear_max_features,
-            ngram_range=(args.linear_ngram_min, args.linear_ngram_max)
+            ngram_range=(args.linear_ngram_min, args.linear_ngram_max),
+            max_df=0.8
         )
         self.vocab, self.inv_vocab = {}, {}
         self.model = LogisticRegression(class_weight='balanced', n_jobs=-1)
+
+        if args.load_model:
+            self.load()
 
     def load(self, path: str = 'linear_model.pkl'):
         with open(os.path.join(self.DATA_PATH, path), 'rb', encoding='utf-8') as f:
@@ -43,8 +46,26 @@ class LinearClassifier(Classifier):
                 'model': self.model,
             }, f)
 
-    def classify(self, sent: str):
-        pass
+    def classify(self, sent: str) -> dict:
+        '''
+        Classifies a given document.
+        :param str sent: document to be classified
+        '''
+        sent = self.normalize(sent)
+        vec = self.vectorizer.transform([sent])
+        prediction = self.model.predict(vec)[0]
+        cls_probs = self.model.predict_proba(vec)[0]
+        coef = self.model.coef_[prediction]
+        markers = [(self.inv_vocab[i], np.abs(coef[i]*vec[0, i]))
+                   for i in vec.indices]  # (token, impact)
+        markers.sort(key=lambda x: x[1], reverse=True)
+        markers = [token for token, impact in markers]
+
+        return {
+            'prediction': Classifier.POETS[prediction],
+            'probs': cls_probs,
+            'markers': markers[:6]
+        }
 
     def read_stopwords(self, file_name: str = 'stop_words.txt'):
         stopwords = []

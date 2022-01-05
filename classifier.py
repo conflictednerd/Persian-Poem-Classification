@@ -5,7 +5,7 @@ import hazm
 
 
 class Classifier(ABC):
-    POEMS = [
+    POETS = [
         'حافظ',
         'خیام',
         'فردوسی',
