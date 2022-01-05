@@ -5,6 +5,7 @@ from typing import List, Union
 import hazm
 import numpy as np
 import pandas as pd
+import pickle
 from sklearn import feature_extraction
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.linear_model import \
@@ -26,11 +27,21 @@ class LinearClassifier(Classifier):
         self.vocab, self.inv_vocab = {}, {}
         self.model = LogisticRegression(class_weight='balanced', n_jobs=-1)
 
-    def load(self, path: str):
-        pass
+    def load(self, path: str = 'linear_model.pkl'):
+        with open(os.path.join(self.DATA_PATH, path), 'rb', encoding='utf-8') as f:
+            temp = pickle.load(f)
+        self.vectorizer = temp['vectorizer']
+        self.vocab = temp['vocab']
+        self.inv_vocab = {v: k for k, v in self.vocab.items()}
+        self.model = temp['model']
 
-    def save(self, path: str):
-        pass
+    def save(self, path: str = 'linear_model.pkl'):
+        with open(os.path.join(self.DATA_PATH, path), 'wb', encoding='utf-8') as f:
+            pickle.dump({
+                'vectorizer': self.vectorizer,
+                'vocab': self.vocab,
+                'model': self.model,
+            }, f)
 
     def classify(self, sent: str):
         pass
