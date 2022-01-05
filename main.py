@@ -38,6 +38,14 @@ def get_parser():
     parser.add_argument('--models_dir', default='./models_dir/',
                         help='directory where models are saved to/loaded from')
 
+    # Linear model parameters:
+    parser.add_argument('--linear_max_features', default=4_000,
+                        type=int, help='maximum vocab size used in tfidf matrix')
+    parser.add_argument('--linear_ngram_min', default=1, type=int,
+                        help='minimum length of ngrams considered in tfidf')
+    parser.add_argument('--linear_ngram_max', default=3, type=int,
+                        help='maximum length of ngrams considered in tfidf')
+
     return parser
 
 
