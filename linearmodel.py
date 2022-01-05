@@ -4,11 +4,15 @@ import pickle
 from typing import List, Union
 
 import hazm
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from sklearn import feature_extraction
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (ConfusionMatrixDisplay, accuracy_score,
+                             classification_report, confusion_matrix)
 
 from classifier import Classifier
 
@@ -67,6 +71,30 @@ class LinearClassifier(Classifier):
             'markers': markers[:6]
         }
 
+    def train(self, args=None):
+        df = self.read_data(os.path.join(self.DATA_PATH, 'train.json'))
+        # X_train.shape = num. of poems * selected_vocab_size
+        X_train = self.vectorizer.fit_transform(df['poem_clean'])
+        self.vocab = self.vectorizer.vocabulary_  # a dict
+        # will be used in extracting markers
+        self.inv_vocab = {v: k for k, v in self.vocab.items()}
+        # TODO: add feature selection
+        self.model.fit(X=X_train, y=df['poet'])
+        self.save()
+
+    def test(self, args=None):
+        print('Evaluation Report:')
+        # TODO: change to test.json
+        df = self.read_data(os.path.join(self.DATA_PATH, 'eval.json'))
+        X_test = self.vectorizer.transform(df['poem_clean'])
+        ConfusionMatrixDisplay.from_estimator(
+            self.model, X_test, df['poet'],
+            normalize='true',
+            # display_labels=Classifier.POETS,
+        )
+        plt.show()
+        print(classification_report(df['poet'], self.model.predict(X_test)))
+
     def read_stopwords(self, file_name: str = 'stop_words.txt'):
         stopwords = []
         with open(os.path.join(self.DATA_PATH, file_name), 'r', encoding='utf-8') as f:
@@ -78,7 +106,7 @@ class LinearClassifier(Classifier):
         clean, lemmatize and remove stopwords
         '''
         mesras = [mesras] if not isinstance(mesras, list) else mesras
-        mesras = [' '.join([self.lemmatizer.lemmatize(word) for word in self.clean(
+        mesras = [' '.join([self.lemmatizer.lemmatize(word).replace('#', '') for word in self.clean(
             mesra).split() if word not in self.stopwords]) for mesra in mesras]
         return ' '.join(mesras)  # concat mesras to form a single string
 
@@ -94,17 +122,3 @@ class LinearClassifier(Classifier):
         df['poem_clean'] = df['poem'].apply(
             lambda x: self.normalize(x))  # clean and concatenate mesras
         return df
-
-    def train(self, args=None):
-        df = self.read_data(os.path.join(self.DATA_PATH, 'train.json'))
-        # X_train.shape = num. of poems * selected_vocab_size
-        X_train = self.vectorizer.fit_transform(df['poem_clean'])
-        self.vocab = self.vectorizer.vocabulary_  # a dict
-        # will be used in extracting markers
-        self.inv_vocab = {v: k for k, v in self.vocab.items()}
-        # TODO: add feature selection
-        self.model.fit(X=X_train, y=df['poet'])
-        self.save()
-
-    def test(self, args):
-        pass
