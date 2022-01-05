@@ -21,6 +21,7 @@ class LinearClassifier(Classifier):
     def __init__(self, args):
         super().__init__()
         self.DATA_PATH = args.data_path
+        self.MODELS_DIR = args.models_dir
         self.stopwords = self.read_stopwords()
         self.lemmatizer = hazm.Lemmatizer()
         self.vectorizer = feature_extraction.text.TfidfVectorizer(
@@ -35,7 +36,7 @@ class LinearClassifier(Classifier):
             self.load()
 
     def load(self, path: str = 'linear_model.pkl'):
-        with open(os.path.join(self.DATA_PATH, path), 'rb', encoding='utf-8') as f:
+        with open(os.path.join(self.MODELS_DIR, path), 'rb') as f:
             temp = pickle.load(f)
         self.vectorizer = temp['vectorizer']
         self.vocab = temp['vocab']
@@ -43,7 +44,7 @@ class LinearClassifier(Classifier):
         self.model = temp['model']
 
     def save(self, path: str = 'linear_model.pkl'):
-        with open(os.path.join(self.DATA_PATH, path), 'wb', encoding='utf-8') as f:
+        with open(os.path.join(self.MODELS_DIR, path), 'wb') as f:
             pickle.dump({
                 'vectorizer': self.vectorizer,
                 'vocab': self.vocab,
@@ -72,7 +73,7 @@ class LinearClassifier(Classifier):
         }
 
     def train(self, args=None):
-        df = self.read_data(os.path.join(self.DATA_PATH, 'train.json'))
+        df = self.read_data('train.json')
         # X_train.shape = num. of poems * selected_vocab_size
         X_train = self.vectorizer.fit_transform(df['poem_clean'])
         self.vocab = self.vectorizer.vocabulary_  # a dict
@@ -85,14 +86,16 @@ class LinearClassifier(Classifier):
     def test(self, args=None):
         print('Evaluation Report:')
         # TODO: change to test.json
-        df = self.read_data(os.path.join(self.DATA_PATH, 'eval.json'))
+        df = self.read_data('eval.json')
         X_test = self.vectorizer.transform(df['poem_clean'])
         ConfusionMatrixDisplay.from_estimator(
             self.model, X_test, df['poet'],
             normalize='true',
-            # display_labels=Classifier.POETS,
+            display_labels=['Hafez', 'Khayyam', 'Ferdousi', 'Moulavi',
+                            'Nezami', 'Saadi', 'Parvin', 'Sanaie', 'Vahshi', 'Roudaki'],
         )
-        plt.show()
+        plt.gcf().set_size_inches(10, 10)
+        plt.savefig(os.path.join(self.DATA_PATH, 'confusion.png'), dpi=100)
         print(classification_report(df['poet'], self.model.predict(X_test)))
 
     def read_stopwords(self, file_name: str = 'stop_words.txt'):
