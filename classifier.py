@@ -5,6 +5,18 @@ import hazm
 
 
 class Classifier(ABC):
+    POEMS = [
+        'حافظ',
+        'خیام',
+        'فردوسی',
+        'مولوی',
+        'نظامی',
+        'سعدی',
+        'پروین اعتصامی',
+        'سنایی',
+        'وحشی بافقی',
+        'رودکی',
+    ]
 
     def __init__(self):
         # replacing non-standard chars with thier equivalent

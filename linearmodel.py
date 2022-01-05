@@ -63,7 +63,7 @@ class LinearClassifier(Classifier):
             lambda x: self.normalize(x))  # clean and concatenate mesras
         return df
 
-    def train(self, args):
+    def train(self, args=None):
         df = self.read_data(os.path.join(self.DATA_PATH, 'train.json'))
         # X_train.shape = num. of poems * selected_vocab_size
         X_train = self.vectorizer.fit_transform(df['poem_clean'])
