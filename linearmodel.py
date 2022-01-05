@@ -9,10 +9,9 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn import feature_extraction
-from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (ConfusionMatrixDisplay, accuracy_score,
-                             classification_report, confusion_matrix)
+                             classification_report)
 
 from classifier import Classifier
 
@@ -27,10 +26,11 @@ class LinearClassifier(Classifier):
         self.vectorizer = feature_extraction.text.TfidfVectorizer(
             max_features=args.linear_max_features,
             ngram_range=(args.linear_ngram_min, args.linear_ngram_max),
-            max_df=0.8
+            max_df=0.75
         )
         self.vocab, self.inv_vocab = {}, {}
-        self.model = LogisticRegression(class_weight='balanced', n_jobs=-1)
+        self.model = LogisticRegression(
+            class_weight='balanced', n_jobs=-1, solver='saga', penalty='l2', C=10)
 
         if args.load_model:
             self.load()
@@ -73,21 +73,24 @@ class LinearClassifier(Classifier):
         }
 
     def train(self, args=None):
-        df = self.read_data('train.json')
-        # X_train.shape = num. of poems * selected_vocab_size
-        X_train = self.vectorizer.fit_transform(df['poem_clean'])
+        df = pd.concat([self.read_data('train.json'),
+                       self.read_data('eval.json')], ignore_index=True)
+        X_train = self.vectorizer.fit_transform(
+            df['poem_clean'])  # poems x vocab
         self.vocab = self.vectorizer.vocabulary_  # a dict
-        # will be used in extracting markers
-        self.inv_vocab = {v: k for k, v in self.vocab.items()}
-        # TODO: add feature selection
+        self.inv_vocab = {v: k for k, v in self.vocab.items()}  # for markers
         self.model.fit(X=X_train, y=df['poet'])
         self.save()
 
     def test(self, args=None):
         print('Evaluation Report:')
-        # TODO: change to test.json
-        df = self.read_data('eval.json')
+        df = self.read_data('test.json')
         X_test = self.vectorizer.transform(df['poem_clean'])
+
+        acc = accuracy_score(df['poet'], self.model.predict(X_test))
+        print(f'Accuracy: {round(acc, 2)}')
+
+        sns.set_theme()
         ConfusionMatrixDisplay.from_estimator(
             self.model, X_test, df['poet'],
             normalize='true',
@@ -96,6 +99,7 @@ class LinearClassifier(Classifier):
         )
         plt.gcf().set_size_inches(10, 10)
         plt.savefig(os.path.join(self.DATA_PATH, 'confusion.png'), dpi=100)
+
         print(classification_report(df['poet'], self.model.predict(X_test)))
 
     def read_stopwords(self, file_name: str = 'stop_words.txt'):
