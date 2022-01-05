@@ -90,7 +90,6 @@ class LinearClassifier(Classifier):
         acc = accuracy_score(df['poet'], self.model.predict(X_test))
         print(f'Accuracy: {round(acc, 2)}')
 
-        sns.set_theme()
         ConfusionMatrixDisplay.from_estimator(
             self.model, X_test, df['poet'],
             normalize='true',
@@ -98,7 +97,7 @@ class LinearClassifier(Classifier):
                             'Nezami', 'Saadi', 'Parvin', 'Sanaie', 'Vahshi', 'Roudaki'],
         )
         plt.gcf().set_size_inches(10, 10)
-        plt.savefig(os.path.join(self.DATA_PATH, 'confusion.png'), dpi=100)
+        plt.savefig(os.path.join(self.DATA_PATH, 'linear_confusion.png'), dpi=100)
 
         print(classification_report(df['poet'], self.model.predict(X_test)))
 
