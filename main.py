@@ -29,11 +29,11 @@ def get_parser():
                         help='use if you want the model to report performance on held-out test set')
     parser.add_argument('--data_path', default='./data/',
                         help='directory where training data is stored')
-    parser.add_argument('--epochs', default=3,
+    parser.add_argument('--epochs', default=3, type=int,
                         help='number of fine_tuning epochs')
     parser.add_argument('--batch_size', default=8,
                         help='language model finetuning batch size')
-    parser.add_argument('--lr', default=5e-5,
+    parser.add_argument('--lr', default=3e-6,
                         help='language model finetuning learning rate')
     parser.add_argument('--models_dir', default='./models_dir/',
                         help='directory where models are saved to/loaded from')
