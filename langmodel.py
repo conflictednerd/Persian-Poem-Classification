@@ -6,9 +6,7 @@ from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 
 import torch
-import numpy as np
 from torch.utils.data import DataLoader
-from sklearn.utils import class_weight
 from datasets import load_dataset
 from multiprocess import set_start_method
 from sklearn.model_selection import train_test_split
@@ -129,7 +127,7 @@ class LMClassifier(Classifier):
 
         out = self.model(torch.tensor(self.tokenizer.encode(
             in_one_string(sent))).int().to(self.DEVICE).unsqueeze(0))
-        # print(out['logits'])
+        #print(out['logits'])
         return {'prediction': Classifier.POETS[out['logits'].argmax(dim=1)]}
 
     def evaluate(self, model, dataloader):
@@ -178,24 +176,14 @@ class LMClassifier(Classifier):
         eval_dataloader = DataLoader(eval_dataset, batch_size=4, collate_fn=data_collator,
                                      shuffle=False)
         optim = AdamW(self.model.parameters(), lr=args.lr)
-
-        class_weights = class_weight.compute_class_weight(
-            class_weight='balanced',
-            classes=np.unique(train_dataset.labels),
-            y=train_dataset.labels
-        )
-
-        class_weights = torch.FloatTensor(class_weights).cuda()
-
-        criterion = torch.nn.CrossEntropyLoss(weight=class_weights).to(self.DEVICE)
-
+        criterion = torch.nn.CrossEntropyLoss().to(self.DEVICE)
         print("beginning training")
         best_acc = 0
 
         acc_after_epoch = self.evaluate(self.model, eval_dataloader)
         print("accuracy before learning: ", acc_after_epoch)
 
-        for epoch in range(int(args.epochs)):
+        for epoch in range(args.epochs):
             self.model.train()
             print("##### epoch no: " + str(epoch + 1))
             for batch_idx, batch in tqdm(enumerate(train_loader), total=len(train_loader)):

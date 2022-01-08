@@ -16,7 +16,7 @@ poet is the id of the poet to whom the song belongs. poem is a list of strings -
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', default='lm',
-                        help='type of classification model: logistic, neural, lm')
+                        help='type of classification model: linear, neural, lm')
     parser.add_argument('--transformer_model_name',
                         default='HooshvareLab/albert-fa-zwnj-base-v2')
     parser.add_argument('--load_model', action='store_true', default=False,
@@ -38,6 +38,14 @@ def get_parser():
     parser.add_argument('--models_dir', default='./models_dir/',
                         help='directory where models are saved to/loaded from')
 
+    # Linear model parameters:
+    parser.add_argument('--linear_max_features', default=3_000,
+                        type=int, help='maximum vocab size used in tfidf matrix')
+    parser.add_argument('--linear_ngram_min', default=1, type=int,
+                        help='minimum length of ngrams considered in tfidf')
+    parser.add_argument('--linear_ngram_max', default=3, type=int,
+                        help='maximum length of ngrams considered in tfidf')
+
     return parser
 
 
@@ -54,10 +62,15 @@ if __name__ == '__main__':
         model = LinearClassifier(args)
 
     if args.train:
+        print('Training started...')
         model.train(args)
+        print('Training finished.')
 
     if args.test:
+        print('Testing started...')
         model.test(args)
+        print('Testing Finished.')
 
     while True:
+        print('Waiting for input...')
         print(model.classify(input()))
