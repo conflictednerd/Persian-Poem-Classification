@@ -8,13 +8,13 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from sklearn.metrics import ConfusionMatrixDisplay, classification_report
+from sklearn.utils import class_weight
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from torchtext.legacy.data import BucketIterator, Field, TabularDataset
 from tqdm import tqdm
-from sklearn.utils import class_weight
 from transformers import AutoTokenizer
-from sklearn.metrics import (ConfusionMatrixDisplay, accuracy_score,
-                             classification_report)
+
 from classifier import Classifier
 
 
@@ -60,6 +60,7 @@ class NeuralClassifier(Classifier):
         self.MODEL_NAME = args.transformer_model_name
         self.MODELS_DIR = args.models_dir
         self.DATA_PATH = args.data_path
+        self.BATCH_SIZE = args.neural_batch_size
         self.DEVICE = torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
         self.tokenizer = AutoTokenizer.from_pretrained(
@@ -71,7 +72,6 @@ class NeuralClassifier(Classifier):
             self.load(self.MODELS_DIR)
         self.model.to(self.DEVICE)
         self.optimizer = optim.Adam(self.model.parameters(), lr=args.neural_lr)
-
 
     def load(self, path: str):
         self.model = torch.load(os.path.join(
@@ -92,7 +92,6 @@ class NeuralClassifier(Classifier):
         valid_running_loss = 0.0
         best_valid_acc = 0
         device = self.DEVICE
-
 
         class_weights = class_weight.compute_class_weight(
             class_weight='balanced',
@@ -141,7 +140,7 @@ class NeuralClassifier(Classifier):
 
                 # evaluation
                 average_train_loss = (
-                                             running_loss / len(self.train_loader)) / eval_freq
+                    running_loss / len(self.train_loader)) / eval_freq
                 average_valid_loss = valid_running_loss / len(self.val_loader)
                 valid_acc = correct / total
                 if valid_acc > best_valid_acc:
@@ -160,6 +159,7 @@ class NeuralClassifier(Classifier):
         print('Training finished')
 
     def test(self, args):
+        self.load(self.MODELS_DIR)
         self.model.eval()
         device = self.DEVICE
         total, correct = 0, 0
@@ -187,7 +187,8 @@ class NeuralClassifier(Classifier):
         )
 
         plt.gcf().set_size_inches(10, 10)
-        plt.savefig(os.path.join(args.data_path, 'neural_confusion.png'), dpi=100)
+        plt.savefig(os.path.join(args.data_path,
+                    'neural_confusion.png'), dpi=100)
 
         print(classification_report(true_labels.cpu(), preds.cpu()))
 
@@ -211,7 +212,6 @@ class NeuralClassifier(Classifier):
                 for i in range(len(lst_dict)):
                     self.train_labels.append(int(lst_dict[i]['poet']))
 
-
             df = pd.DataFrame(lst_dict)
             max_words = 400  # 256?
             df['label'] = df['poet']
@@ -234,15 +234,13 @@ class NeuralClassifier(Classifier):
             path=self.DATA_PATH, train='train.csv', validation='eval.csv', test='test.csv', format='CSV', fields=fields,
             skip_header=True)
 
-
         # Iterators
-        self.train_loader = BucketIterator(train, batch_size=32, sort_key=lambda x: len(x.text),
+        self.train_loader = BucketIterator(train, batch_size=self.BATCH_SIZE, sort_key=lambda x: len(x.text),
                                            device=self.DEVICE, sort=True, sort_within_batch=True)
-        self.val_loader = BucketIterator(val, batch_size=32, sort_key=lambda x: len(x.text),
+        self.val_loader = BucketIterator(val, self.BATCH_SIZE, sort_key=lambda x: len(x.text),
                                          device=self.DEVICE, sort=True, sort_within_batch=True)
-        self.test_loader = BucketIterator(test, batch_size=32, sort_key=lambda x: len(x.text),
+        self.test_loader = BucketIterator(test, self.BATCH_SIZE, sort_key=lambda x: len(x.text),
                                           device=self.DEVICE, sort=True, sort_within_batch=True)
-
 
         # Vocabulary
         self.text_field.build_vocab(train, min_freq=3)  # Save this and load it
