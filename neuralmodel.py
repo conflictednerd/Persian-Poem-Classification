@@ -12,6 +12,7 @@ from torchtext.legacy.data import Field, TabularDataset, BucketIterator
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import torch.optim as optim
+from tqdm import tqdm
 
 
 class LSTM(nn.Module):
@@ -35,7 +36,7 @@ class LSTM(nn.Module):
         text_emb = self.embedding(text)
 
         packed_input = pack_padded_sequence(
-            text_emb, text_len, batch_first=True, enforce_sorted=False)
+            text_emb, text_len.cpu(), batch_first=True, enforce_sorted=False)
         packed_output, _ = self.lstm(packed_input)
         output, _ = pad_packed_sequence(packed_output, batch_first=True)
 
@@ -88,10 +89,10 @@ class NeuralClassifier(Classifier):
         # training loop
         self.model.train()
         for epoch in range(args.neural_epochs):
-            for ((text, text_len), labels), _ in self.train_loader:
+            for ((text, text_len), labels), _ in tqdm(self.train_loader):
                 labels = labels.long().to(device)
                 text = text.to(device)
-                text_len = text_len.to(device)
+                # text_len = text_len.to(device)
                 output = self.model(text, text_len)
 
                 loss = criterion(output, labels)
@@ -134,7 +135,7 @@ class NeuralClassifier(Classifier):
                 # print progress
                 print(
                     f'Epoch [{epoch+1}/{args.neural_epochs}], Train Loss: {average_train_loss:.2f}, Valid Loss: {average_valid_loss:.2f}, Valid Accuracy: {valid_acc:.2f}')
-                self.save()  # save every epoch
+                self.save(self.DATA_PATH)  # save every epoch
         print('Training finished')
 
     def test(self, args):
@@ -156,7 +157,7 @@ class NeuralClassifier(Classifier):
                 lst_dict = json.load(f)
 
             df = pd.DataFrame(lst_dict)
-            max_words = 400
+            max_words = 400 #256?
             df['label'] = df['poet']
             df['text'] = df['poem'].apply(lambda mesras: ' '.join(
                 '، '.join([self.clean(x) for x in mesras]).split(' ')[:max_words]))
