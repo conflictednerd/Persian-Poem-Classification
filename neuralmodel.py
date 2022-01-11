@@ -62,7 +62,7 @@ class NeuralClassifier(Classifier):
             'cuda' if torch.cuda.is_available() else 'cpu')
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.MODELS_DIR if args.load_model else self.MODEL_NAME)
-        self.read_data()
+        self.read_data(not args.load_model)
         self.model = LSTM(len(self.text_field.vocab))
         if args.load_model:
             self.load(self.MODELS_DIR)
@@ -154,23 +154,24 @@ class NeuralClassifier(Classifier):
             stopwords = f.readlines()
         return [word.strip() for word in stopwords]
 
-    def read_data(self):
+    def read_data(self, create):
         '''
         reads poems from json file and returns them (cleaned) in a dataframe
         '''
-        for file_name in ['train', 'eval', 'test']:
-            lst_dict = []
-            with open(os.path.join(self.DATA_PATH, file_name+'.json'), 'r', encoding='utf-8') as f:
-                lst_dict = json.load(f)
+        if create:
+            for file_name in ['train', 'eval', 'test']:
+                lst_dict = []
+                with open(os.path.join(self.DATA_PATH, file_name+'.json'), 'r', encoding='utf-8') as f:
+                    lst_dict = json.load(f)
 
-            df = pd.DataFrame(lst_dict)
-            max_words = 400  # 256?
-            df['label'] = df['poet']
-            df['text'] = df['poem'].apply(lambda mesras: ' '.join(
-                '، '.join([self.clean(x) for x in mesras]).split(' ')[:max_words]))
-            df = df.reindex(columns=['text', 'label'])
-            df.to_csv(os.path.join(self.DATA_PATH,
-                      file_name+'.csv'), index=False)
+                df = pd.DataFrame(lst_dict)
+                max_words = 400  # 256?
+                df['label'] = df['poet']
+                df['text'] = df['poem'].apply(lambda mesras: ' '.join(
+                    '، '.join([self.clean(x) for x in mesras]).split(' ')[:max_words]))
+                df = df.reindex(columns=['text', 'label'])
+                df.to_csv(os.path.join(self.DATA_PATH,
+                                       file_name+'.csv'), index=False)
 
         # Fields
         label_field = Field(sequential=False, use_vocab=False,
@@ -192,4 +193,6 @@ class NeuralClassifier(Classifier):
                                           device=self.DEVICE, sort=True, sort_within_batch=True)
 
         # Vocabulary
-        self.text_field.build_vocab(train, min_freq=3)  # Save this and load it
+        if create:
+            self.text_field.build_vocab(
+                train, min_freq=3)

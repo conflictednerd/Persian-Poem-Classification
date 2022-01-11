@@ -54,7 +54,7 @@ def get_parser():
     parser.add_argument('--neural_lr', default=1e-3, type=float,
                         help='neural model learning rate')
     parser.add_argument('--neural_eval_freq', default=1, type=int,
-                        help='language model finetuning learning rate')
+                        help='neural model evaluation frequency')
 
 
     return parser
