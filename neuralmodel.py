@@ -1,18 +1,19 @@
-from classifier import Classifier
 import json
-import pandas as pd
-import matplotlib.pyplot as plt
-import re
-import numpy as np
 import os
-from transformers import AutoConfig, AutoTokenizer
+import re
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
-from torchtext.legacy.data import Field, TabularDataset, BucketIterator
-import torch.nn as nn
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import torch.optim as optim
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from torchtext.legacy.data import BucketIterator, Field, TabularDataset
 from tqdm import tqdm
+from transformers import AutoTokenizer
+
+from classifier import Classifier
 
 
 class LSTM(nn.Module):
@@ -60,28 +61,32 @@ class NeuralClassifier(Classifier):
         self.DEVICE = torch.device(
             'cuda' if torch.cuda.is_available() else 'cpu')
         self.tokenizer = AutoTokenizer.from_pretrained(
-            self.MODEL_DIR if args.load_model else self.MODEL_NAME)
+            self.MODELS_DIR if args.load_model else self.MODEL_NAME)
         self.read_data()
         self.model = LSTM(len(self.text_field.vocab))
         if args.load_model:
-            self.load(self.DATA_PATH)
+            self.load(self.MODELS_DIR)
         self.model.to(self.DEVICE)
         self.optimizer = optim.Adam(self.model.parameters(), lr=args.neural_lr)
 
     def load(self, path: str):
         self.model = torch.load(os.path.join(
             path, 'lstm.pt'), map_location=self.DEVICE)
+        self.text_field = torch.load(os.path.join(path, 'text_field.pt'))
 
     def save(self, path: str):
         torch.save(self.model, os.path.join(path, 'lstm.pt'))
+        torch.save(self.text_field, os.path.join(path, 'text_field.pt'))
+        self.tokenizer.save_pretrained(path)
 
-    def classify(self, sent: str):
-        pass #TODO
+    def classify(self, sent: str):  # use self.text_field.process([sent])
+        pass  # TODO
 
     def train(self, args):
         # initialize running values
         running_loss = 0.0
         valid_running_loss = 0.0
+        best_valid_acc = 0
         device = self.DEVICE
         criterion = nn.CrossEntropyLoss()
         eval_freq = args.neural_eval_freq
@@ -125,6 +130,9 @@ class NeuralClassifier(Classifier):
                     running_loss / len(self.train_loader)) / eval_freq
                 average_valid_loss = valid_running_loss / len(self.val_loader)
                 valid_acc = correct/total
+                if valid_acc > best_valid_acc:
+                    best_valid_acc = valid_acc
+                    self.save(self.MODELS_DIR)  # save the better model
 
                 # resetting running values
                 running_loss = 0.0
@@ -135,11 +143,10 @@ class NeuralClassifier(Classifier):
                 # print progress
                 print(
                     f'Epoch [{epoch+1}/{args.neural_epochs}], Train Loss: {average_train_loss:.2f}, Valid Loss: {average_valid_loss:.2f}, Valid Accuracy: {valid_acc:.2f}')
-                self.save(self.DATA_PATH)  # save every epoch
         print('Training finished')
 
     def test(self, args):
-        pass # TODO
+        pass  # TODO
 
     def read_stopwords(self, file_name: str = 'stop_words.txt'):
         stopwords = []
@@ -157,7 +164,7 @@ class NeuralClassifier(Classifier):
                 lst_dict = json.load(f)
 
             df = pd.DataFrame(lst_dict)
-            max_words = 400 #256?
+            max_words = 400  # 256?
             df['label'] = df['poet']
             df['text'] = df['poem'].apply(lambda mesras: ' '.join(
                 '، '.join([self.clean(x) for x in mesras]).split(' ')[:max_words]))
@@ -185,4 +192,4 @@ class NeuralClassifier(Classifier):
                                           device=self.DEVICE, sort=True, sort_within_batch=True)
 
         # Vocabulary
-        self.text_field.build_vocab(train, min_freq=3)
+        self.text_field.build_vocab(train, min_freq=3)  # Save this and load it
