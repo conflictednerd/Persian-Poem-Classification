@@ -16,7 +16,7 @@ poet is the id of the poet to whom the song belongs. poem is a list of strings -
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', default='lm',
-                        help='type of classification model: logistic, neural, lm')
+                        help='type of classification model: linear, neural, lm')
     parser.add_argument('--transformer_model_name',
                         default='HooshvareLab/albert-fa-zwnj-base-v2')
     parser.add_argument('--load_model', action='store_true', default=False,
@@ -37,6 +37,25 @@ def get_parser():
                         help='language model finetuning learning rate')
     parser.add_argument('--models_dir', default='./models_dir/',
                         help='directory where models are saved to/loaded from')
+
+    # Linear model parameters:
+    parser.add_argument('--linear_max_features', default=3_000,
+                        type=int, help='maximum vocab size used in tfidf matrix')
+    parser.add_argument('--linear_ngram_min', default=1, type=int,
+                        help='minimum length of ngrams considered in tfidf')
+    parser.add_argument('--linear_ngram_max', default=3, type=int,
+                        help='maximum length of ngrams considered in tfidf')
+
+    # Neural model parameters:
+    parser.add_argument('--neural_epochs', default=20, type=int,
+                        help='number of training epochs')
+    parser.add_argument('--neural_batch_size', default=32, type= int,
+                        help='neural model batch size')
+    parser.add_argument('--neural_lr', default=1e-3, type=float,
+                        help='neural model learning rate')
+    parser.add_argument('--neural_eval_freq', default=1, type=int,
+                        help='language model finetuning learning rate')
+
 
     return parser
 
