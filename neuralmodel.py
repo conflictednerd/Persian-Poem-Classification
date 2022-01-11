@@ -77,7 +77,7 @@ class NeuralClassifier(Classifier):
     def save(self, path: str):
         torch.save(self.model, os.path.join(path, 'lstm.pt'))
         torch.save(self.text_field, os.path.join(path, 'text_field.pt'))
-        self.tokenizer.save_pretrained()
+        self.tokenizer.save_pretrained(self.MODELS_DIR)
 
     def classify(self, sent: str):  # use self.text_field.process([sent])
         pass  # TODO
